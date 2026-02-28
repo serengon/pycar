@@ -95,6 +95,24 @@
         .led.on { background: #0f0; box-shadow: 0 0 5px #0f0; }
         .led.off { background: #f00; box-shadow: 0 0 3px #f00; }
 
+        /* --- Botón shutdown --- */
+        #btn-shutdown {
+            margin-top: 6px;
+            width: 100%;
+            padding: 3px 0;
+            background: rgba(180,0,0,0.5);
+            border: 1px solid rgba(255,80,80,0.5);
+            border-radius: 4px;
+            color: #f88;
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: all;
+            letter-spacing: 1px;
+        }
+        #btn-shutdown:active { background: rgba(220,0,0,0.8); }
+
         /* --- Botones R / E --- */
         #buttons-panel {
             position: absolute;
@@ -296,6 +314,7 @@
                 <div class="led off" id="led-joy"></div>
                 <span>JOY</span>
             </div>
+            <button id="btn-shutdown" onclick="shutdownServer()">OFF</button>
         </div>
 
         <!-- Botones -->
@@ -554,6 +573,14 @@ function requestFullscreen() {
     if (screen.orientation && screen.orientation.lock) {
         screen.orientation.lock('landscape').catch(() => {});
     }
+}
+
+// --- Apagado remoto ---
+async function shutdownServer() {
+    if (!confirm('¿Apagar el servidor?')) return;
+    try {
+        await fetch('/shutdown', { method: 'POST' });
+    } catch {}
 }
 
 // --- Start ---

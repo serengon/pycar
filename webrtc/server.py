@@ -330,6 +330,14 @@ async def websocket_telemetry(websocket: WebSocket):
         ws_clients.discard(websocket)
         print(f"  📱 Celu desconectado ({len(ws_clients)} activos)")
 
+# --- Apagado remoto ---
+
+@app.post("/shutdown")
+async def shutdown_server():
+    print("  🛑 Apagado solicitado desde la UI")
+    asyncio.get_event_loop().call_later(0.5, lambda: os.kill(os.getpid(), signal.SIGTERM))
+    return JSONResponse({"status": "ok"})
+
 # --- Calidad de video ---
 
 quality_lock = None  # asyncio.Lock, se inicializa en startup
