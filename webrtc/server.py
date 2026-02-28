@@ -292,15 +292,11 @@ if __name__ == "__main__":
     print("=" * 50)
 
     init_serial()
-    start_mediamtx()
 
     # Joystick en thread separado
     joy_thread = threading.Thread(target=joystick_loop, daemon=True)
     joy_thread.start()
 
-    print(f"  📡 WiFi:  PyCar / pycar1234")
-    print(f"  🌐 Web:   http://192.168.4.1:{WEB_PORT}")
-    print(f"  📹 Video: WebRTC via MediaMTX :8889")
     print("=" * 50)
 
     uvicorn.run(app, host="0.0.0.0", port=WEB_PORT)
