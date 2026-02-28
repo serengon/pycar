@@ -2,7 +2,7 @@
 # MediaMTX - Modo LAN (red del router)
 # ============================================
 
-logLevel: info
+logLevel: warn
 
 # ---- RTSP (interno) ----
 rtsp: yes

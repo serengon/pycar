@@ -94,10 +94,19 @@ def init_serial():
 # --- MediaMTX ---
 mediamtx_proc = None
 
+MTX_LOG_FILE = "/tmp/mediamtx.log"
+MTX_LOG_LINES = 5
+
 def _mediamtx_log_reader(proc):
-    """Imprime logs de MediaMTX en la consola."""
+    """Guarda últimas MTX_LOG_LINES líneas en archivo; solo ERR va a consola."""
+    buf = deque(maxlen=MTX_LOG_LINES)
     for line in proc.stdout:
-        print(f"  [MTX] {line.decode(errors='ignore').rstrip()}")
+        text = line.decode(errors="ignore").rstrip()
+        buf.append(text)
+        with open(MTX_LOG_FILE, "w") as f:
+            f.write("\n".join(buf) + "\n")
+        if "ERR" in text:
+            print(f"  [MTX] {text}")
 
 def start_mediamtx():
     global mediamtx_proc

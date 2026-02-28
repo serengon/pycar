@@ -2,7 +2,7 @@
 # MediaMTX - Modo FPV (AP propio de la Raspi)
 # ============================================
 
-logLevel: info
+logLevel: warn
 
 # ---- RTSP (interno) ----
 rtsp: yes
