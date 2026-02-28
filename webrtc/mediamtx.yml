@@ -1,5 +1,7 @@
 # ============================================
-# MediaMTX - Modo LAN (red del router)
+# MediaMTX - Configuración de red (compartida)
+# El bloque paths es generado dinámicamente por
+# server.py según el preset de calidad activo.
 # ============================================
 
 logLevel: warn
@@ -13,17 +15,15 @@ webrtc: yes
 webrtcAddress: :8889
 webrtcLocalUDPAddress: :8189
 webrtcICEServers2: []
-# Sin webrtcIPAddresses: MediaMTX auto-detecta la IP de la red
 
 # ---- Desactivar lo que no usamos ----
 hls: no
 rtmp: no
 srt: no
 
-# ---- Paths ----
+# ---- Paths (fallback si server.py no genera el runtime yml) ----
 paths:
   cam:
-    # MED preset (default) - libx264 zerolatency @ 640x360 nativa C505
     runOnInit: >
       ffmpeg -f v4l2 -input_format mjpeg -video_size 640x360 -framerate 30
       -i /dev/video0

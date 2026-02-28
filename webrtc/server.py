@@ -40,7 +40,7 @@ WEB_PORT = 8080
 MEDIAMTX_BIN = "/opt/mediamtx"
 MEDIAMTX_CFG = os.environ.get(
     "MEDIAMTX_CFG",
-    str(Path(__file__).parent / "mediamtx_lan.yml")
+    str(Path(__file__).parent / "mediamtx.yml")
 )
 
 # ============== PRESETS DE CALIDAD ==============

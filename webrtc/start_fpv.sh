@@ -21,5 +21,5 @@ echo "   Video: http://192.168.4.1:8889/cam/whep"
 echo ""
 
 . venv/bin/activate
-export MEDIAMTX_CFG="$(pwd)/mediamtx_fpv.yml"
+export MEDIAMTX_CFG="$(pwd)/mediamtx.yml"
 python3 server.py
