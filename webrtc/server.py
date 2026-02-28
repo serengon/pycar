@@ -23,6 +23,7 @@ import os
 import json
 import time
 import threading
+from dataclasses import dataclass
 from pathlib import Path
 from collections import deque
 
@@ -41,6 +42,24 @@ MEDIAMTX_CFG = os.environ.get(
     "MEDIAMTX_CFG",
     str(Path(__file__).parent / "mediamtx_lan.yml")
 )
+
+# ============== PRESETS DE CALIDAD ==============
+@dataclass
+class VideoPreset:
+    width: int
+    height: int
+    bitrate: str
+    gop: int
+
+VIDEO_PRESETS = {
+    "low":  VideoPreset(424, 240,  "500k",  8),   # nativa C505, WiFi débil
+    "med":  VideoPreset(640, 360,  "1500k", 10),  # nativa C505, sweet spot
+    "high": VideoPreset(1280, 720, "4000k", 15),  # nativa C505, máxima calidad
+}
+DEFAULT_PRESET = "med"
+MEDIAMTX_TMP_CFG = "/tmp/pycar_mediamtx_runtime.yml"
+current_preset_name = DEFAULT_PRESET
+# ================================================
 
 # Joystick (mismos valores que el script original)
 EJE_Q = 4          # Direccion
@@ -65,6 +84,8 @@ telemetry = {
     "tx_hist": [],
     "rx_hist": [],
     "fps": 0,
+    "quality": DEFAULT_PRESET,
+    "quality_changing": False,
 }
 
 MAX_HIST = 4
@@ -116,13 +137,37 @@ def _mediamtx_log_reader(proc):
             if "ERR" in text:
                 print(f"  [MTX] {text}")
 
-def start_mediamtx():
+def _build_mediamtx_cfg(preset: VideoPreset) -> str:
+    """Lee el yml base, reemplaza solo el bloque paths con el preset dado."""
+    with open(MEDIAMTX_CFG, "r") as f:
+        base = f.read()
+    header = base[:base.index("paths:")] if "paths:" in base else base
+    ffmpeg_cmd = (
+        f"ffmpeg -f v4l2 -input_format mjpeg "
+        f"-video_size {preset.width}x{preset.height} -framerate 30 "
+        f"-i /dev/video0 -fflags +nobuffer -flags +low_delay "
+        f"-vf format=yuv420p -c:v libx264 -profile:v baseline "
+        f"-preset ultrafast -tune zerolatency "
+        f"-b:v {preset.bitrate} -g {preset.gop} "
+        f"-f rtsp rtsp://localhost:$RTSP_PORT/$MTX_PATH"
+    )
+    return header + f"paths:\n  cam:\n    runOnInit: {ffmpeg_cmd}\n    runOnInitRestart: yes\n"
+
+def write_preset_cfg(preset: VideoPreset) -> str:
+    """Escribe el yml del preset en /tmp y retorna la ruta."""
+    content = _build_mediamtx_cfg(preset)
+    with open(MEDIAMTX_TMP_CFG, "w") as f:
+        f.write(content)
+    return MEDIAMTX_TMP_CFG
+
+def start_mediamtx(cfg_path: str = None):
     global mediamtx_proc
+    cfg = cfg_path or MEDIAMTX_CFG
     if not os.path.exists(MEDIAMTX_BIN):
         print(f"  ⚠ MediaMTX no encontrado en {MEDIAMTX_BIN}")
         return
     mediamtx_proc = subprocess.Popen(
-        [MEDIAMTX_BIN, MEDIAMTX_CFG],
+        [MEDIAMTX_BIN, cfg],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT
     )
@@ -285,11 +330,49 @@ async def websocket_telemetry(websocket: WebSocket):
         ws_clients.discard(websocket)
         print(f"  📱 Celu desconectado ({len(ws_clients)} activos)")
 
+# --- Calidad de video ---
+
+quality_lock = None  # asyncio.Lock, se inicializa en startup
+QUALITY_RESTART_DELAY = 2.0
+
+@app.post("/quality/{preset_name}")
+async def set_quality(preset_name: str):
+    global current_preset_name
+    if preset_name not in VIDEO_PRESETS:
+        return JSONResponse({"error": f"Preset inválido. Opciones: {list(VIDEO_PRESETS.keys())}"}, status_code=400)
+    if preset_name == current_preset_name:
+        return JSONResponse({"status": "ok", "changed": False})
+
+    async with quality_lock:
+        telemetry["quality_changing"] = True
+        telemetry["quality"] = preset_name
+        try:
+            cfg_path = write_preset_cfg(VIDEO_PRESETS[preset_name])
+        except Exception as e:
+            telemetry["quality_changing"] = False
+            telemetry["quality"] = current_preset_name
+            return JSONResponse({"error": str(e)}, status_code=500)
+        stop_mediamtx()
+        await asyncio.sleep(QUALITY_RESTART_DELAY)
+        start_mediamtx(cfg_path)
+        current_preset_name = preset_name
+        telemetry["quality_changing"] = False
+
+    p = VIDEO_PRESETS[preset_name]
+    print(f"  ✓ Calidad: {preset_name} ({p.width}x{p.height} {p.bitrate})")
+    return JSONResponse({"status": "ok", "quality": preset_name, "changed": True})
+
 # --- Lifecycle ---
 
 @app.on_event("startup")
 async def startup():
-    start_mediamtx()
+    global quality_lock
+    quality_lock = asyncio.Lock()
+    try:
+        cfg_path = write_preset_cfg(VIDEO_PRESETS[DEFAULT_PRESET])
+        start_mediamtx(cfg_path)
+    except Exception:
+        start_mediamtx()
     asyncio.create_task(telemetry_broadcaster())
 
 @app.on_event("shutdown")

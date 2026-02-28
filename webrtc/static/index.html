@@ -168,6 +168,34 @@
             line-height: 1.5;
         }
 
+        /* --- Preset de calidad (abajo centro) --- */
+        #quality-panel {
+            position: absolute;
+            bottom: 8px; left: 50%;
+            transform: translateX(-50%);
+            display: flex; gap: 6px; align-items: center;
+            background: rgba(0,0,0,0.55);
+            padding: 6px 10px; border-radius: 6px;
+            pointer-events: all;
+        }
+        .quality-label {
+            font-size: 9px; letter-spacing: 1px; opacity: 0.6; margin-right: 2px;
+        }
+        .btn-quality {
+            padding: 4px 10px; border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.08); color: #aaa;
+            font-family: 'Courier New', monospace; font-size: 11px; font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-quality.active  { background: rgba(0,200,0,0.3); border-color: #0c0; color: #0f0; }
+        .btn-quality.changing { border-color: #fa0; color: #fa0;
+            animation: pulse 0.6s ease-in-out infinite alternate; }
+        @keyframes pulse { from { opacity: 0.6; } to { opacity: 1.0; } }
+        @media (orientation: landscape) and (max-height: 500px) {
+            #quality-panel { bottom: 44px; }
+        }
+
         /* --- Crosshair central sutil --- */
         #crosshair {
             position: absolute;
@@ -302,6 +330,14 @@
             <div class="row" id="disp-fps">FPS: -</div>
             <div class="row" id="disp-joy">Joy: -</div>
         </div>
+
+        <!-- Preset de calidad -->
+        <div id="quality-panel">
+            <span class="quality-label">QUAL</span>
+            <button class="btn-quality" id="btn-low"  onclick="setQuality('low')">LOW</button>
+            <button class="btn-quality" id="btn-med"  onclick="setQuality('med')">MED</button>
+            <button class="btn-quality" id="btn-high" onclick="setQuality('high')">HIGH</button>
+        </div>
     </div>
 
     <!-- Overlay -->
@@ -334,6 +370,36 @@ setInterval(() => {
     lastFpsTime = now;
     document.getElementById('disp-fps').textContent = fps > 0 ? `FPS: ${fps}` : 'FPS: -';
 }, 1000);
+
+// --- Preset de calidad ---
+let currentQuality = 'med';
+let qualityChanging = false;
+
+function updateQualityButtons(quality, changing) {
+    ['low', 'med', 'high'].forEach(q => {
+        const btn = document.getElementById('btn-' + q);
+        btn.className = 'btn-quality' +
+            (changing && q === quality ? ' changing' :
+             !changing && q === quality ? ' active' : '');
+    });
+}
+
+async function setQuality(preset) {
+    if (qualityChanging || preset === currentQuality) return;
+    qualityChanging = true;
+    updateQualityButtons(preset, true);
+    try {
+        const res = await fetch(`/quality/${preset}`, { method: 'POST' });
+        if (!res.ok) { qualityChanging = false; updateQualityButtons(currentQuality, false); }
+    } catch {
+        qualityChanging = false;
+        updateQualityButtons(currentQuality, false);
+    }
+    // Safety timeout: desbloquear si el WS no confirma en 8s
+    setTimeout(() => { qualityChanging = false; }, 8000);
+}
+
+updateQualityButtons('med', false);
 
 // --- Utilidades ---
 function setLed(id, on) {
@@ -459,6 +525,13 @@ function startWebSocket() {
             // Joy name
             document.getElementById('disp-joy').textContent =
                 t.joystick_ok ? `Joy: ${t.joystick_name || 'OK'}` : 'Joy: -';
+
+            // Preset de calidad
+            if (t.quality !== undefined) {
+                currentQuality = t.quality;
+                qualityChanging = t.quality_changing || false;
+                updateQualityButtons(currentQuality, qualityChanging);
+            }
 
         } catch {}
     };

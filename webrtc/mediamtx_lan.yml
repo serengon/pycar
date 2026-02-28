@@ -23,9 +23,9 @@ srt: no
 # ---- Paths ----
 paths:
   cam:
-    # Low-latency encoder (libx264 zerolatency @ 480x270)
+    # MED preset (default) - libx264 zerolatency @ 640x360 nativa C505
     runOnInit: >
-      ffmpeg -f v4l2 -input_format mjpeg -video_size 480x270 -framerate 30
+      ffmpeg -f v4l2 -input_format mjpeg -video_size 640x360 -framerate 30
       -i /dev/video0
       -fflags +nobuffer -flags +low_delay
       -vf format=yuv420p
@@ -33,19 +33,8 @@ paths:
       -profile:v baseline
       -preset ultrafast
       -tune zerolatency
-      -b:v 1M
+      -b:v 1500k
       -g 10
       -f rtsp rtsp://localhost:$RTSP_PORT/$MTX_PATH
-
-    # Hardware encoder (más fps, más latencia)
-    # runOnInit: >
-    #   ffmpeg -f v4l2 -input_format mjpeg -video_size 640x480 -framerate 30
-    #   -i /dev/video0
-    #   -vf format=yuv420p
-    #   -c:v h264_v4l2m2m
-    #   -b:v 2M
-    #   -g 15
-    #   -bf 0
-    #   -f rtsp rtsp://localhost:$RTSP_PORT/$MTX_PATH
 
     runOnInitRestart: yes
