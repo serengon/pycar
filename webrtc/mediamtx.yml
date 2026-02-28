@@ -28,7 +28,7 @@ paths:
       ffmpeg -f v4l2 -input_format mjpeg -video_size 640x360 -framerate 30
       -i /dev/video0
       -fflags +nobuffer -flags +low_delay
-      -c:v h264_v4l2m2m -bf 0
+      -vf format=yuv420p -c:v h264_v4l2m2m -bf 0
       -b:v 1500k
       -g 10
       -f rtsp rtsp://localhost:$RTSP_PORT/$MTX_PATH

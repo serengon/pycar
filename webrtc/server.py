@@ -146,7 +146,7 @@ def _build_mediamtx_cfg(preset: VideoPreset) -> str:
         f"ffmpeg -f v4l2 -input_format mjpeg "
         f"-video_size {preset.width}x{preset.height} -framerate 30 "
         f"-i /dev/video0 -fflags +nobuffer -flags +low_delay "
-        f"-c:v h264_v4l2m2m -bf 0 "
+        f"-vf format=yuv420p -c:v h264_v4l2m2m -bf 0 "
         f"-b:v {preset.bitrate} -g {preset.gop} "
         f"-f rtsp rtsp://localhost:$RTSP_PORT/$MTX_PATH"
     )
