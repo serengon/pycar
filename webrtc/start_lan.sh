@@ -18,7 +18,7 @@ echo ""
 TMP_CFG="/tmp/mediamtx_lan_runtime.yml"
 cp mediamtx_lan.yml "$TMP_CFG"
 echo "" >> "$TMP_CFG"
-echo "webrtcIPAddresses:" >> "$TMP_CFG"
+echo "webrtcLocalIPs:" >> "$TMP_CFG"
 echo "  - ${IP}" >> "$TMP_CFG"
 
 . venv/bin/activate
