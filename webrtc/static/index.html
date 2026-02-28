@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PyCar FPV</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Evitar zoom accidental en celular */
+            touch-action: manipulation;
+        }
+
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            background: #000;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+        }
+
+        /* ======= HUD OVERLAY ======= */
+        #hud {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        /* --- Panel superior: TX / RX --- */
+        #top-panel {
+            position: absolute;
+            top: 8px; left: 8px;
+            background: rgba(0,0,0,0.55);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 6px;
+            padding: 6px 10px;
+            display: flex;
+            gap: 20px;
+            font-size: 11px;
+        }
+        .hist-col h4 {
+            font-size: 9px;
+            margin-bottom: 2px;
+            letter-spacing: 1px;
+            opacity: 0.7;
+        }
+        .hist-col .line {
+            font-size: 11px;
+            line-height: 1.4;
+            white-space: nowrap;
+        }
+        #tx-hist h4, #tx-hist .line { color: #0f0; }
+        #rx-hist h4, #rx-hist .line { color: #0ff; }
+
+        /* --- Status LEDs (esquina superior derecha) --- */
+        #status-panel {
+            position: absolute;
+            top: 8px; right: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: rgba(0,0,0,0.55);
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 10px;
+        }
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .led {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.2);
+            flex-shrink: 0;
+        }
+        .led.on { background: #0f0; box-shadow: 0 0 5px #0f0; }
+        .led.off { background: #f00; box-shadow: 0 0 3px #f00; }
+
+        /* --- Botones R / E --- */
+        #buttons-panel {
+            position: absolute;
+            top: 100px; right: 12px;
+            display: flex;
+            gap: 6px;
+        }
+        .btn-ind {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: #000;
+        }
+        .btn-ind.active-r { background: #0f0; }
+        .btn-ind.active-e { background: #0ff; }
+        .btn-ind.off { background: #333; color: #666; }
+
+        /* --- Barras de ejes (abajo izquierda) --- */
+        #axes-panel {
+            position: absolute;
+            bottom: 8px; left: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: rgba(0,0,0,0.55);
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+        .axis-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+        }
+        .axis-label { width: 12px; font-weight: bold; }
+        .axis-bar {
+            width: 120px; height: 10px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            position: relative;
+            border-radius: 2px;
+        }
+        .axis-fill {
+            position: absolute;
+            top: 0; height: 100%;
+            border-radius: 1px;
+        }
+        .axis-center {
+            position: absolute;
+            left: 50%; top: 0;
+            width: 1px; height: 100%;
+            background: #666;
+        }
+        .axis-val { width: 40px; text-align: right; font-size: 10px; opacity: 0.8; }
+
+        /* --- Info abajo derecha --- */
+        #info-panel {
+            position: absolute;
+            bottom: 8px; right: 8px;
+            text-align: right;
+            background: rgba(0,0,0,0.55);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+        #info-panel .row {
+            line-height: 1.5;
+        }
+
+        /* --- Crosshair central sutil --- */
+        #crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.25;
+        }
+        #crosshair .h {
+            position: absolute;
+            width: 30px; height: 1px;
+            background: #fff;
+            top: 0; left: -15px;
+        }
+        #crosshair .v {
+            position: absolute;
+            width: 1px; height: 30px;
+            background: #fff;
+            top: -15px; left: 0;
+        }
+
+        /* --- Overlay conexion --- */
+        #connect-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            z-index: 10;
+        }
+        #connect-overlay h2 { font-size: 18px; }
+        #connect-overlay p { font-size: 12px; color: #aaa; text-align: center; padding: 0 20px; }
+        #connect-overlay button {
+            background: #0a0;
+            color: #fff;
+            border: none;
+            padding: 14px 40px;
+            font-size: 16px;
+            font-family: inherit;
+            cursor: pointer;
+            border-radius: 6px;
+            pointer-events: all;
+        }
+        .hidden { display: none !important; }
+
+        /* Fullscreen en landscape para celu */
+        @media (orientation: landscape) and (max-height: 500px) {
+            #top-panel { font-size: 10px; padding: 4px 8px; }
+            #status-panel { font-size: 9px; padding: 4px 6px; }
+            .axis-bar { width: 90px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <video id="video" autoplay playsinline muted></video>
+
+    <div id="hud">
+        <!-- Crosshair -->
+        <div id="crosshair"><div class="h"></div><div class="v"></div></div>
+
+        <!-- TX / RX -->
+        <div id="top-panel">
+            <div class="hist-col" id="tx-hist">
+                <h4>TX</h4>
+                <div class="line" id="tx-0">-</div>
+                <div class="line" id="tx-1">-</div>
+                <div class="line" id="tx-2">-</div>
+                <div class="line" id="tx-3">-</div>
+            </div>
+            <div class="hist-col" id="rx-hist">
+                <h4>RX</h4>
+                <div class="line" id="rx-0">-</div>
+                <div class="line" id="rx-1">-</div>
+                <div class="line" id="rx-2">-</div>
+                <div class="line" id="rx-3">-</div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div id="status-panel">
+            <div class="status-row">
+                <div class="led off" id="led-video"></div>
+                <span>VIDEO</span>
+            </div>
+            <div class="status-row">
+                <div class="led off" id="led-link"></div>
+                <span>LINK</span>
+            </div>
+            <div class="status-row">
+                <div class="led off" id="led-serial"></div>
+                <span>SERIAL</span>
+            </div>
+            <div class="status-row">
+                <div class="led off" id="led-joy"></div>
+                <span>JOY</span>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div id="buttons-panel">
+            <div class="btn-ind off" id="btn-r">R</div>
+            <div class="btn-ind off" id="btn-e">E</div>
+        </div>
+
+        <!-- Ejes -->
+        <div id="axes-panel">
+            <div class="axis-row">
+                <span class="axis-label" style="color:#f80">Q</span>
+                <div class="axis-bar">
+                    <div class="axis-center"></div>
+                    <div class="axis-fill" id="bar-q" style="background:#f80"></div>
+                </div>
+                <span class="axis-val" id="val-q">0.00</span>
+            </div>
+            <div class="axis-row">
+                <span class="axis-label" style="color:#08f">G</span>
+                <div class="axis-bar">
+                    <div class="axis-center"></div>
+                    <div class="axis-fill" id="bar-g" style="background:#08f"></div>
+                </div>
+                <span class="axis-val" id="val-g">0.00</span>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div id="info-panel">
+            <div class="row" id="disp-webrtc">WebRTC</div>
+            <div class="row" id="disp-joy">Joy: -</div>
+        </div>
+    </div>
+
+    <!-- Overlay -->
+    <div id="connect-overlay">
+        <h2>🚗 PyCar FPV</h2>
+        <p>Pantalla de video en vivo del auto</p>
+        <p style="color:#0f0; font-size:11px;">Gira el celu en horizontal para mejor experiencia</p>
+        <button onclick="startAll()">CONECTAR</button>
+    </div>
+</div>
+
+<script>
+// ============== CONFIG ==============
+const RASPI_HOST = window.location.hostname || '192.168.4.1';
+const WS_URL = `ws://${RASPI_HOST}:8080/ws`;
+const WHEP_URL = `http://${RASPI_HOST}:8889/cam/whep`;
+const MAX_HIST = 4;
+// ====================================
+
+let ws = null;
+let pc = null;
+let frameCount = 0;
+let lastFpsTime = performance.now();
+
+// --- Utilidades ---
+function setLed(id, on) {
+    document.getElementById(id).className = 'led ' + (on ? 'on' : 'off');
+}
+
+function updateBar(barId, valId, value) {
+    const bar = document.getElementById(barId);
+    const val = document.getElementById(valId);
+    const pct = value * 50;
+    if (value >= 0) {
+        bar.style.left = '50%';
+        bar.style.width = pct + '%';
+    } else {
+        bar.style.left = (50 + pct) + '%';
+        bar.style.width = (-pct) + '%';
+    }
+    val.textContent = value.toFixed(2);
+}
+
+function updateHist(list, prefix) {
+    for (let i = 0; i < MAX_HIST; i++) {
+        document.getElementById(`${prefix}-${i}`).textContent = list[i] || '-';
+    }
+}
+
+// --- WebRTC (WHEP) ---
+async function startVideo() {
+    if (pc) {
+        pc.close();
+        pc = null;
+    }
+
+    pc = new RTCPeerConnection({ iceServers: [] });
+    pc.addTransceiver('video', { direction: 'recvonly' });
+
+    pc.ontrack = (evt) => {
+        const video = document.getElementById('video');
+        video.srcObject = evt.streams[0];
+        setLed('led-video', true);
+        document.getElementById('disp-webrtc').textContent = 'WebRTC ✓';
+
+        if (video.requestVideoFrameCallback) {
+            video.requestVideoFrameCallback(function tick() {
+                frameCount++;
+                video.requestVideoFrameCallback(tick);
+            });
+        }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+        const s = pc.iceConnectionState;
+        if (s === 'disconnected' || s === 'failed') {
+            setLed('led-video', false);
+            document.getElementById('disp-webrtc').textContent = 'Reconectando...';
+            setTimeout(startVideo, 3000);
+        }
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    const sdp = await new Promise((resolve) => {
+        if (pc.iceGatheringState === 'complete') {
+            resolve(pc.localDescription.sdp);
+        } else {
+            pc.addEventListener('icegatheringstatechange', () => {
+                if (pc.iceGatheringState === 'complete') {
+                    resolve(pc.localDescription.sdp);
+                }
+            });
+        }
+    });
+
+    try {
+        const res = await fetch(WHEP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/sdp' },
+            body: sdp,
+        });
+        if (!res.ok) throw new Error(`WHEP ${res.status}`);
+        const answer = await res.text();
+        await pc.setRemoteDescription({ type: 'answer', sdp: answer });
+    } catch (err) {
+        console.error('WHEP error:', err);
+        setLed('led-video', false);
+        document.getElementById('disp-webrtc').textContent = 'Error video...';
+        setTimeout(startVideo, 3000);
+    }
+}
+
+// --- WebSocket (recibe telemetria) ---
+function startWebSocket() {
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+        setLed('led-link', true);
+    };
+
+    ws.onmessage = (evt) => {
+        try {
+            const t = JSON.parse(evt.data);
+
+            // Ejes
+            updateBar('bar-q', 'val-q', t.q || 0);
+            updateBar('bar-g', 'val-g', t.g || 0);
+
+            // Botones
+            const btnR = document.getElementById('btn-r');
+            const btnE = document.getElementById('btn-e');
+            btnR.className = 'btn-ind ' + (t.btn_r ? 'active-r' : 'off');
+            btnE.className = 'btn-ind ' + (t.btn_e ? 'active-e' : 'off');
+
+            // LEDs
+            setLed('led-serial', t.serial_ok);
+            setLed('led-joy', t.joystick_ok);
+
+            // Historial
+            updateHist(t.tx_hist || [], 'tx');
+            updateHist(t.rx_hist || [], 'rx');
+
+            // Joy name
+            document.getElementById('disp-joy').textContent =
+                t.joystick_ok ? `Joy: ${t.joystick_name || 'OK'}` : 'Joy: -';
+
+        } catch {}
+    };
+
+    ws.onclose = () => {
+        setLed('led-link', false);
+        setTimeout(startWebSocket, 2000);
+    };
+
+    ws.onerror = () => setLed('led-link', false);
+}
+
+// --- Fullscreen en tap (para celu) ---
+function requestFullscreen() {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+
+    // Forzar landscape si se puede
+    if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {});
+    }
+}
+
+// --- Start ---
+function startAll() {
+    document.getElementById('connect-overlay').classList.add('hidden');
+    requestFullscreen();
+    startVideo();
+    startWebSocket();
+}
+</script>
+
+</body>
+</html>
