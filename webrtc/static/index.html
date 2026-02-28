@@ -387,14 +387,15 @@ async function startVideo() {
     await pc.setLocalDescription(offer);
 
     const sdp = await new Promise((resolve) => {
+        const done = () => resolve(pc.localDescription.sdp);
         if (pc.iceGatheringState === 'complete') {
-            resolve(pc.localDescription.sdp);
+            done();
         } else {
             pc.addEventListener('icegatheringstatechange', () => {
-                if (pc.iceGatheringState === 'complete') {
-                    resolve(pc.localDescription.sdp);
-                }
+                if (pc.iceGatheringState === 'complete') done();
             });
+            // Fallback: no esperar más de 2s para no bloquear en LAN
+            setTimeout(done, 2000);
         }
     });
 
