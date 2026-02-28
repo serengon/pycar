@@ -83,6 +83,7 @@ def init_serial():
     for port in [SERIAL_PORT, "/dev/ttyACM0", "/dev/ttyUSB1"]:
         try:
             ser = serial.Serial(port, SERIAL_BAUD, timeout=0.01)
+            time.sleep(2)  # Arduino resetea al abrir el puerto (DTR), esperar boot
             serial_ok = True
             telemetry["serial_ok"] = True
             print(f"  ✓ Arduino en {port}")
@@ -201,11 +202,11 @@ def joystick_loop():
             if btn_r and not prev_btn_r:
                 if ser and ser.is_open:
                     ser.write(b"R\n")
-                    tx_hist.append("R")
+                    tx_hist.appendleft("R")
             if btn_e and not prev_btn_e:
                 if ser and ser.is_open:
                     ser.write(b"E\n")
-                    tx_hist.append("E")
+                    tx_hist.appendleft("E")
 
             prev_btn_r = btn_r
             prev_btn_e = btn_e
@@ -216,7 +217,7 @@ def joystick_loop():
                     msg = f"Q{valor_q:.2f} G{valor_g:.2f}"
                     try:
                         ser.write((msg + "\n").encode())
-                        tx_hist.append(msg)
+                        tx_hist.appendleft(msg)
                     except serial.SerialException:
                         serial_ok = False
                         telemetry["serial_ok"] = False
