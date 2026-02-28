@@ -20,6 +20,21 @@ systemctl stop dnsmasq 2>/dev/null || true
 # 2. IP estatica para wlan0
 echo "[2/3] Configurando red..."
 
+# En Raspberry Pi OS Bookworm, dhcpcd fue reemplazado por NetworkManager.
+# Instalamos dhcpcd5 si no está disponible como servicio.
+if ! systemctl list-units --full --all 2>/dev/null | grep -q "dhcpcd.service"; then
+    echo "  Instalando dhcpcd5 (no encontrado como servicio)..."
+    apt install -y dhcpcd5
+fi
+
+# Decirle a NetworkManager que no gestione wlan0 (evita conflictos con dhcpcd)
+mkdir -p /etc/NetworkManager/conf.d
+cat > /etc/NetworkManager/conf.d/pycar-unmanaged.conf <<'EOF'
+[keyfile]
+unmanaged-devices=interface-name:wlan0
+EOF
+systemctl reload-or-restart NetworkManager 2>/dev/null || true
+
 if [ ! -f /etc/dhcpcd.conf.backup ]; then
     cp /etc/dhcpcd.conf /etc/dhcpcd.conf.backup
     echo "  ✓ Backup de dhcpcd.conf creado"
@@ -77,6 +92,7 @@ rfkill unblock wlan
 systemctl unmask hostapd
 systemctl enable hostapd
 systemctl enable dnsmasq
+systemctl enable dhcpcd
 
 echo ""
 echo "=== Access Point configurado ==="
