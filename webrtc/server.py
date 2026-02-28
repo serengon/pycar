@@ -43,9 +43,9 @@ MEDIAMTX_CFG = os.environ.get(
 )
 
 # Joystick (mismos valores que el script original)
-EJE_Q = 3          # Direccion
-EJE_G = 2          # Acelerador
-BOTON_R = 9
+EJE_Q = 4          # Direccion
+EJE_G = 3          # Acelerador
+BOTON_R = 10
 BOTON_E = 5
 DEADZONE = 0.05
 SEND_INTERVAL = 0.1  # Segundos entre envios de ejes

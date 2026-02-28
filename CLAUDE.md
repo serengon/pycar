@@ -70,8 +70,8 @@ Control local donde la PC Windows actúa como estación de control:
 - Envía comandos directamente al Arduino vía serial (COM4, 115200 baud)
 
 ### Protocolo serial (Arduino)
-- Ejes: `"Q<valor> G<valor>"` — steering (eje 3) y gas (eje 2)
-- Botones: `"R"` (botón 9) y `"E"` (botón 5)
+- Ejes: `"Q<valor> G<valor>"` — steering (eje 4) y gas (eje 3)
+- Botones: `"R"` (botón 10) y `"E"` (botón 5)
 - Deadzone: 0.05 (5%), intervalo de envío: 100ms
 
 ### Web UI (`webrtc/static/index.html`)
@@ -85,9 +85,9 @@ Interfaz para móvil en modo landscape:
 |-----------|-------|---------|
 | `SERIAL_PORT` | `/dev/ttyUSB0` | `server.py` |
 | `WEB_PORT` | `8080` | `server.py` |
-| `EJE_Q` (steering) | `3` | `server.py` |
-| `EJE_G` (gas) | `2` | `server.py` |
-| `BOTON_R` | `9` | `server.py` |
+| `EJE_Q` (steering) | `4` | `server.py` |
+| `EJE_G` (gas) | `3` | `server.py` |
+| `BOTON_R` | `10` | `server.py` |
 | `BOTON_E` | `5` | `server.py` |
 | `DEADZONE` | `0.05` | `server.py` |
 | AP SSID / Password | `PyCar` / `pycar1234` | `setup_ap.sh` |
