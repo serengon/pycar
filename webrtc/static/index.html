@@ -299,6 +299,7 @@
         <!-- Info -->
         <div id="info-panel">
             <div class="row" id="disp-webrtc">WebRTC</div>
+            <div class="row" id="disp-fps">FPS: -</div>
             <div class="row" id="disp-joy">Joy: -</div>
         </div>
     </div>
@@ -324,6 +325,15 @@ let ws = null;
 let pc = null;
 let frameCount = 0;
 let lastFpsTime = performance.now();
+
+// --- FPS counter ---
+setInterval(() => {
+    const now = performance.now();
+    const fps = Math.round(frameCount * 1000 / (now - lastFpsTime));
+    frameCount = 0;
+    lastFpsTime = now;
+    document.getElementById('disp-fps').textContent = fps > 0 ? `FPS: ${fps}` : 'FPS: -';
+}, 1000);
 
 // --- Utilidades ---
 function setLed(id, on) {
