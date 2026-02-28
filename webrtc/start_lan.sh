@@ -14,13 +14,6 @@ echo "   Web:   http://${IP}:8080"
 echo "   Video: http://${IP}:8889/cam/whep"
 echo ""
 
-# Generar config de MediaMTX con la IP real de la red
-TMP_CFG="/tmp/mediamtx_lan_runtime.yml"
-cp mediamtx_lan.yml "$TMP_CFG"
-echo "" >> "$TMP_CFG"
-echo "webrtcLocalIPs:" >> "$TMP_CFG"
-echo "  - ${IP}" >> "$TMP_CFG"
-
 . venv/bin/activate
-export MEDIAMTX_CFG="$TMP_CFG"
+export MEDIAMTX_CFG="$(pwd)/mediamtx_lan.yml"
 python3 server.py

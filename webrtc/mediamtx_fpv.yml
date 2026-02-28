@@ -13,9 +13,6 @@ webrtc: yes
 webrtcAddress: :8889
 webrtcLocalUDPAddress: :8189
 webrtcICEServers2: []
-# IP fija del AP para que WebRTC funcione sin router
-webrtcLocalIPs:
-  - 192.168.4.1
 
 # ---- Desactivar lo que no usamos ----
 hls: no
