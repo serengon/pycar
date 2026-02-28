@@ -94,6 +94,11 @@ def init_serial():
 # --- MediaMTX ---
 mediamtx_proc = None
 
+def _mediamtx_log_reader(proc):
+    """Imprime logs de MediaMTX en la consola."""
+    for line in proc.stdout:
+        print(f"  [MTX] {line.decode(errors='ignore').rstrip()}")
+
 def start_mediamtx():
     global mediamtx_proc
     if not os.path.exists(MEDIAMTX_BIN):
@@ -105,6 +110,8 @@ def start_mediamtx():
         stderr=subprocess.STDOUT
     )
     print(f"  ✓ MediaMTX PID:{mediamtx_proc.pid}")
+    log_thread = threading.Thread(target=_mediamtx_log_reader, args=(mediamtx_proc,), daemon=True)
+    log_thread.start()
 
 def stop_mediamtx():
     global mediamtx_proc
