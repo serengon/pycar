@@ -94,19 +94,26 @@ def init_serial():
 # --- MediaMTX ---
 mediamtx_proc = None
 
-MTX_LOG_FILE = "/tmp/mediamtx.log"
-MTX_LOG_LINES = 5
+MTX_LOG_DIR = "/tmp/pycar_logs"
+MTX_LOG_MAX = 5
 
 def _mediamtx_log_reader(proc):
-    """Guarda últimas MTX_LOG_LINES líneas en archivo; solo ERR va a consola."""
-    buf = deque(maxlen=MTX_LOG_LINES)
-    for line in proc.stdout:
-        text = line.decode(errors="ignore").rstrip()
-        buf.append(text)
-        with open(MTX_LOG_FILE, "w") as f:
-            f.write("\n".join(buf) + "\n")
-        if "ERR" in text:
-            print(f"  [MTX] {text}")
+    """Escribe log de esta sesión a archivo rotativo; solo ERR va a consola."""
+    os.makedirs(MTX_LOG_DIR, exist_ok=True)
+
+    # Rotar: eliminar logs viejos si hay más de MTX_LOG_MAX
+    logs = sorted(Path(MTX_LOG_DIR).glob("mediamtx_*.log"))
+    for old in logs[: max(0, len(logs) - MTX_LOG_MAX + 1)]:
+        old.unlink()
+
+    log_path = Path(MTX_LOG_DIR) / f"mediamtx_{int(time.time())}.log"
+    with open(log_path, "w") as f:
+        for line in proc.stdout:
+            text = line.decode(errors="ignore").rstrip()
+            f.write(text + "\n")
+            f.flush()
+            if "ERR" in text:
+                print(f"  [MTX] {text}")
 
 def start_mediamtx():
     global mediamtx_proc
